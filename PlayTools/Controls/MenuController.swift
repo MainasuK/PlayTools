@@ -66,6 +66,17 @@ extension UIApplication {
             Toast.showHint(title: "Rotated")
         })
     }
+    
+    @objc
+    func hideAlertController(_ sender: AnyObject) {
+        for scene in connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                guard let rootViewController = window.rootViewController else { continue }
+                rootViewController.presentedViewController?.dismiss(animated: true)
+            }
+        }
+    }
 }
 
 extension UIViewController {
@@ -77,13 +88,6 @@ extension UIViewController {
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1, execute: {
             self.dismiss(animated: true)
         })
-    }
-}
-
-extension UIAlertController {
-    @objc
-    func hideAlertController(_ sender: AnyObject) {
-        hideAlertController(sender)
     }
 }
 
@@ -110,7 +114,7 @@ var keymappingSelectors = [#selector(UIApplication.switchEditorMode(_:)),
                            #selector(UIApplication.upscaleElement(_:)),
                            #selector(UIApplication.downscaleElement(_:)),
                            #selector(UIApplication.rotateView(_:)),
-                           #selector(UIAlertController.hideAlertController(_:))
+                           #selector(UIApplication.hideAlertController(_:))
     ]
 
 class MenuController {

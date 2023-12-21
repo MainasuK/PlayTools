@@ -80,6 +80,13 @@ extension UIViewController {
     }
 }
 
+extension UIAlertController {
+    @objc
+    func hideAlertController(_ sender: AnyObject) {
+        hideAlertController(sender)
+    }
+}
+
 struct CommandsList {
     static let KeymappingToolbox = "keymapping"
 }
@@ -94,13 +101,16 @@ var keymapping = [
     NSLocalizedString("menu.keymapping.downsizeElement", tableName: "Playtools",
                       value: "Downsize selected element", comment: ""),
     NSLocalizedString("menu.keymapping.rotateDisplay", tableName: "Playtools",
-                      value: "Rotate display area", comment: "")
+                      value: "Rotate display area", comment: ""),
+    NSLocalizedString("menu.keymapping.hideAlertController", tableName: "Playtools",
+                      value: "Hide alert", comment: "")
   ]
 var keymappingSelectors = [#selector(UIApplication.switchEditorMode(_:)),
                            #selector(UIApplication.removeElement(_:)),
                            #selector(UIApplication.upscaleElement(_:)),
                            #selector(UIApplication.downscaleElement(_:)),
-                           #selector(UIApplication.rotateView(_:))
+                           #selector(UIApplication.rotateView(_:)),
+                           #selector(UIAlertController.hideAlertController(_:))
     ]
 
 class MenuController {

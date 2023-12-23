@@ -155,8 +155,14 @@ class MenuController {
     }
 
     class func keymappingMenu() -> UIMenu {
-        let keyCommands = [ "K", UIKeyCommand.inputDelete,
-                            UIKeyCommand.inputUpArrow, UIKeyCommand.inputDownArrow, "R", "L"]
+        let keyCommands = [
+            "K", // menu.keymapping.toggleEditor
+            UIKeyCommand.inputDelete, // menu.keymapping.deleteElement
+            UIKeyCommand.inputUpArrow, // menu.keymapping.upsizeElement
+            UIKeyCommand.inputDownArrow, // menu.keymapping.downsizeElement
+            "R", // menu.keymapping.rotateDisplay
+            "H" // menu.keymapping.hideAlertController
+        ]
         let arrowKeyChildrenCommands = zip(keyCommands, keymapping).map { (command, btn) in
             UIKeyCommand(title: btn,
                          image: nil,

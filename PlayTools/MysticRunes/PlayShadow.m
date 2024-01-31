@@ -181,7 +181,10 @@ __attribute__((visibility("hidden")))
     [objc_getClass("AVAudioPlayer") swizzleInstanceMethod:@selector(play) withMethod:@selector(pm_return_yes)];
     [objc_getClass("AVAudioPlayer") swizzleClassMethod:@selector(initWithData:error:) withMethod:@selector(pm_return_aduio_player_with_data:error:)];
     [objc_getClass("AVAudioPlayer") swizzleClassMethod:@selector(initWithData:error:) withMethod:@selector(pm_return_aduio_player_with_content_of_url:error:)];
-    NSLog(@"Helle World");
+    NSLog(@"Hello World");
+
+    // hook for Wuthering waves game
+    [objc_getClass("CSConstants") swizzleInstanceMethod:@selector(isDebugLogEnabled) withMethod:@selector(pm_return_true)];
 
     // canResizeToFitContent
     // [objc_getClass("UIWindow") swizzleInstanceMethod:@selector(canResizeToFitContent) withMethod:@selector(pm_return_true)];

@@ -61,12 +61,17 @@ extension UIApplication {
                 rootViewController.rotateView(sender)
             }
         }
-        
+
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2, execute: {
             Toast.showHint(title: "Rotated")
         })
     }
-    
+
+    @objc
+    func toggleDebugOverlay(_ sender: AnyObject) {
+        DebugController.instance.toggleDebugOverlay()
+    }
+
     @objc
     func hideAlertController(_ sender: AnyObject) {
         for scene in connectedScenes {
@@ -106,6 +111,8 @@ var keymapping = [
                       value: "Downsize selected element", comment: ""),
     NSLocalizedString("menu.keymapping.rotateDisplay", tableName: "Playtools",
                       value: "Rotate display area", comment: ""),
+    NSLocalizedString("menu.keymapping.toggleDebug", tableName: "Playtools",
+                      value: "Toggle Debug Overlay", comment: ""),
     NSLocalizedString("menu.keymapping.hideAlertController", tableName: "Playtools",
                       value: "Hide alert", comment: "")
   ]
@@ -114,6 +121,7 @@ var keymappingSelectors = [#selector(UIApplication.switchEditorMode(_:)),
                            #selector(UIApplication.upscaleElement(_:)),
                            #selector(UIApplication.downscaleElement(_:)),
                            #selector(UIApplication.rotateView(_:)),
+                           #selector(UIApplication.toggleDebugOverlay(_:)),
                            #selector(UIApplication.hideAlertController(_:))
     ]
 
@@ -161,6 +169,7 @@ class MenuController {
             UIKeyCommand.inputUpArrow, // menu.keymapping.upsizeElement
             UIKeyCommand.inputDownArrow, // menu.keymapping.downsizeElement
             "R", // menu.keymapping.rotateDisplay
+            "D", // menu.keymapping.toggleDebugOverlay
             "H" // menu.keymapping.hideAlertController
         ]
         let arrowKeyChildrenCommands = zip(keyCommands, keymapping).map { (command, btn) in

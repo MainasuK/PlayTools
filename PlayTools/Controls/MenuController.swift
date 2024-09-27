@@ -71,6 +71,17 @@ extension UIApplication {
     func toggleDebugOverlay(_ sender: AnyObject) {
         DebugController.instance.toggleDebugOverlay()
     }
+
+    @objc
+    func hideAlertController(_ sender: AnyObject) {
+        for scene in connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                guard let rootViewController = window.rootViewController else { continue }
+                rootViewController.presentedViewController?.dismiss(animated: true)
+            }
+        }
+    }
 }
 
 extension UIViewController {
@@ -101,14 +112,17 @@ var keymapping = [
     NSLocalizedString("menu.keymapping.rotateDisplay", tableName: "Playtools",
                       value: "Rotate display area", comment: ""),
     NSLocalizedString("menu.keymapping.toggleDebug", tableName: "Playtools",
-                      value: "Toggle Debug Overlay", comment: "")
+                      value: "Toggle Debug Overlay", comment: ""),
+    NSLocalizedString("menu.keymapping.hideAlertController", tableName: "Playtools",
+                      value: "Hide alert", comment: "")
   ]
 var keymappingSelectors = [#selector(UIApplication.switchEditorMode(_:)),
                            #selector(UIApplication.removeElement(_:)),
                            #selector(UIApplication.upscaleElement(_:)),
                            #selector(UIApplication.downscaleElement(_:)),
                            #selector(UIApplication.rotateView(_:)),
-                           #selector(UIApplication.toggleDebugOverlay(_:))
+                           #selector(UIApplication.toggleDebugOverlay(_:)),
+                           #selector(UIApplication.hideAlertController(_:))
     ]
 
 class MenuController {
@@ -149,8 +163,15 @@ class MenuController {
     }
 
     class func keymappingMenu() -> UIMenu {
-        let keyCommands = [ "K", UIKeyCommand.inputDelete,
-                            UIKeyCommand.inputUpArrow, UIKeyCommand.inputDownArrow, "R", "D"]
+        let keyCommands = [
+            "K", // menu.keymapping.toggleEditor
+            UIKeyCommand.inputDelete, // menu.keymapping.deleteElement
+            UIKeyCommand.inputUpArrow, // menu.keymapping.upsizeElement
+            UIKeyCommand.inputDownArrow, // menu.keymapping.downsizeElement
+            "R", // menu.keymapping.rotateDisplay
+            "D", // menu.keymapping.toggleDebugOverlay
+            "H" // menu.keymapping.hideAlertController
+        ]
         let arrowKeyChildrenCommands = zip(keyCommands, keymapping).map { (command, btn) in
             UIKeyCommand(title: btn,
                          image: nil,

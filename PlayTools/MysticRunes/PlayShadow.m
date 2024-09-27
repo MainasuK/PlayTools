@@ -8,6 +8,7 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <PlayTools/PlayTools-Swift.h>
+#import <AVFAudio/AVAudioPlayer.h>
 
 __attribute__((visibility("hidden")))
 @interface PlayShadowLoader : NSObject
@@ -153,6 +154,14 @@ __attribute__((visibility("hidden")))
     return 0;
 }
 
++ (AVAudioPlayer*) pm_return_aduio_player_with_data:(NSData *)data error:(NSError * _Nullable *)outError {
+    return [AVAudioPlayer init];
+}
+
++ (AVAudioPlayer*) pm_return_aduio_player_with_content_of_url:(NSURL *)data error:(NSError * _Nullable *)outError {
+    return [AVAudioPlayer init];
+}
+
 @end
 
 @implementation PlayShadowLoader
@@ -166,8 +175,16 @@ __attribute__((visibility("hidden")))
     // if ([[PlaySettings shared] bypass]) [self loadEnvironmentBypass]; # disabled as it might be too powerful
 
     // Swizzle ATTrackingManager
-    [objc_getClass("ATTrackingManager") swizzleClassMethod:@selector(requestTrackingAuthorizationWithCompletionHandler:) withMethod:@selector(pm_return_2_with_completion_handler:)];
-    [objc_getClass("ATTrackingManager") swizzleClassMethod:@selector(trackingAuthorizationStatus) withMethod:@selector(pm_return_2)];
+//    [objc_getClass("ATTrackingManager") swizzleClassMethod:@selector(requestTrackingAuthorizationWithCompletionHandler:) withMethod:@selector(pm_return_2_with_completion_handler:)];
+//    [objc_getClass("ATTrackingManager") swizzleClassMethod:@selector(trackingAuthorizationStatus) withMethod:@selector(pm_return_2)];
+
+    [objc_getClass("AVAudioPlayer") swizzleInstanceMethod:@selector(play) withMethod:@selector(pm_return_yes)];
+    [objc_getClass("AVAudioPlayer") swizzleClassMethod:@selector(initWithData:error:) withMethod:@selector(pm_return_aduio_player_with_data:error:)];
+    [objc_getClass("AVAudioPlayer") swizzleClassMethod:@selector(initWithData:error:) withMethod:@selector(pm_return_aduio_player_with_content_of_url:error:)];
+    NSLog(@"Hello World");
+
+    // hook for Wuthering waves game
+    [objc_getClass("CSConstants") swizzleInstanceMethod:@selector(isDebugLogEnabled) withMethod:@selector(pm_return_true)];
 
     // canResizeToFitContent
     // [objc_getClass("UIWindow") swizzleInstanceMethod:@selector(canResizeToFitContent) withMethod:@selector(pm_return_true)];

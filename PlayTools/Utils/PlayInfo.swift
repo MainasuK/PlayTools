@@ -3,6 +3,7 @@
 //  PlayTools
 //
 
+import os.log
 import Foundation
 
 class PlayInfo: NSObject {
@@ -22,6 +23,14 @@ class PlayInfo: NSObject {
             return true
         }
         return false
+    }
+}
+
+extension PlayInfo {
+    static let logger = Logger(subsystem: "PlayInfo", category: "PlayInfo")
+    
+    static func log(message: String) {
+        logger.log(level: .debug, "\(message)")
     }
 }
 

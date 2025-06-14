@@ -24,6 +24,7 @@ public class PlayCover: NSObject {
     }
 
     @objc static public func initMenu(menu: NSObject) {
+        PlayInfo.log(message: "init MenuController on: \(menu.debugDescription)")
         guard let menuBuilder = menu as? UIMenuBuilder else { return }
         shared.menuController = MenuController(with: menuBuilder)
     }

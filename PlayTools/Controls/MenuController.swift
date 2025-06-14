@@ -81,6 +81,16 @@ extension UIApplication {
     }
 
     @objc
+    func hideAlertController(_ sender: AnyObject) {
+        for scene in connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                window.rootViewController?.presentedViewController?.dismiss(animated: true)
+            }
+        }
+    }
+
+    @objc
     func nextKeymap(_ sender: AnyObject) {
         let isCmdK = mode == .editor
 
@@ -148,28 +158,30 @@ var keymapping = [
     NSLocalizedString("menu.keymapping.previousKeymap", tableName: "Playtools",
                       value: "Previous Keymap", comment: ""),
     NSLocalizedString("menu.keymapping.nextKeymap", tableName: "Playtools",
-                      value: "Next Keymap", comment: "")
+                      value: "Next Keymap", comment: ""),
+    NSLocalizedString("menu.keymapping.hideAlertController", tableName: "Playtools",
+                      value: "Hide alert", comment: "")
   ]
 var iconsSelctor = [
     UIImage(systemName: "pencil"),
     UIImage(systemName: "trash.fill"),
     UIImage(systemName: "square.resize.up"),
     UIImage(systemName: "square.resize.down"),
-    UIImage(systemName: "rectangle.landscape.rotate"),
     UIImage(systemName: "wrench.and.screwdriver"),
     UIImage(systemName: "pointer.arrow.slash"),
     UIImage(systemName: "arrow.down.square"),
-    UIImage(systemName: "arrow.up.square")
+    UIImage(systemName: "arrow.up.square"),
+    UIImage(systemName: "xmark.rectangle")
   ]
 var keymappingSelectors = [#selector(UIApplication.switchEditorMode(_:)),
                            #selector(UIApplication.removeElement(_:)),
                            #selector(UIApplication.upscaleElement(_:)),
                            #selector(UIApplication.downscaleElement(_:)),
-                           #selector(UIApplication.rotateView(_:)),
                            #selector(UIApplication.toggleDebugOverlay(_:)),
                            #selector(UIApplication.hideCursor(_:)),
                            #selector(UIApplication.previousKeymap(_:)),
-                           #selector(UIApplication.nextKeymap(_:))
+                           #selector(UIApplication.nextKeymap(_:)),
+                           #selector(UIApplication.hideAlertController(_:))
     ]
 
 class MenuController {
@@ -238,7 +250,8 @@ class MenuController {
             "D",                            // Toggle debug overlay
             ".",                            // Hide cursor until move
             "[",                            // Previous keymap
-            "]"                             // Next keymap
+            "]",                            // Next keymap
+            ""                              // Hide alert
         ]
         let arrowKeyChildrenCommands = zip(zip(keyCommands, keymapping), iconsSelctor).map { (arg0, image) in
             let (command, btn) = arg0

@@ -75,6 +75,17 @@ extension UIApplication {
     @objc func hideCursor(_ sender: AnyObject) {
         AKInterface.shared!.hideCursorMove()
     }
+    
+    @objc
+    func hideAlertController(_ sender: AnyObject) {
+        for scene in connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                guard let rootViewController = window.rootViewController else { continue }
+                rootViewController.presentedViewController?.dismiss(animated: true)
+            }
+        }
+    }
 }
 
 extension UIViewController {
@@ -107,7 +118,9 @@ var keymapping = [
     NSLocalizedString("menu.keymapping.toggleDebug", tableName: "Playtools",
                       value: "Toggle Debug Overlay", comment: ""),
     NSLocalizedString("menu.keymapping.hide.pointer", tableName: "Playtools",
-                      value: "Hide Mouse Pointer", comment: "")
+                      value: "Hide Mouse Pointer", comment: ""),
+    NSLocalizedString("menu.keymapping.hideAlertController", tableName: "Playtools",
+                      value: "Hide alert", comment: "")
   ]
 var keymappingSelectors = [#selector(UIApplication.switchEditorMode(_:)),
                            #selector(UIApplication.removeElement(_:)),
@@ -115,13 +128,14 @@ var keymappingSelectors = [#selector(UIApplication.switchEditorMode(_:)),
                            #selector(UIApplication.downscaleElement(_:)),
                            #selector(UIApplication.rotateView(_:)),
                            #selector(UIApplication.toggleDebugOverlay(_:)),
-                           #selector(UIApplication.hideCursor(_:))
+                           #selector(UIApplication.hideCursor(_:)),
+                           #selector(UIApplication.hideAlertController(_:))
     ]
 
 class MenuController {
     init(with builder: UIMenuBuilder) {
         if #available(iOS 26.0, *) {
-            // Dely to avoid error
+            // Delay to avoid error
             // Cannot set a main menu system configuration while the main menu system is building.
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 let configuration = UIMainMenuSystem.Configuration()
@@ -134,7 +148,7 @@ class MenuController {
             setupMenu(with: builder)
         }
     }
-    
+
     func setupMenu(with builder: UIMenuBuilder) {
         if Toucher.logEnabled {
             builder.insertSibling(MenuController.debuggingMenu(), afterMenu: .view)
@@ -172,8 +186,17 @@ class MenuController {
     }
 
     class func keymappingMenu() -> UIMenu {
-        let keyCommands = [ "K", UIKeyCommand.inputDelete,
-                            UIKeyCommand.inputUpArrow, UIKeyCommand.inputDownArrow, "R", "D", "."]
+        let keyCommands = [
+            "K", // menu.keymapping.toggleEditor
+            UIKeyCommand.inputDelete, // menu.keymapping.deleteElement
+            UIKeyCommand.inputUpArrow, // menu.keymapping.upsizeElement
+            UIKeyCommand.inputDownArrow, // menu.keymapping.downsizeElement
+            "R", // menu.keymapping.rotateDisplay
+            "D", // menu.keymapping.toggleDebug
+            ".", // menu.keymapping.hide.pointer
+            "", // menu.keymapping.hideAlertController
+        ]
+
         let arrowKeyChildrenCommands = zip(keyCommands, keymapping).map { (command, btn) in
             UIKeyCommand(title: btn,
                          image: nil,

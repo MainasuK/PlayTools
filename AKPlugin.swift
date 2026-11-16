@@ -9,8 +9,67 @@ import AppKit
 import CoreGraphics
 import Foundation
 
+// Add a lightweight struct so we can decode only the flag we care about
+private struct AKAppSettingsData: Codable {
+    var hideTitleBar: Bool?
+    var floatingWindow: Bool?
+    var resolution: Int?
+    var resizableAspectRatioWidth: Int?
+    var resizableAspectRatioHeight: Int?
+}
+
 class AKPlugin: NSObject, Plugin {
     required override init() {
+        super.init()
+        if let window = NSApplication.shared.windows.first {
+            window.styleMask.insert([.resizable])
+            window.collectionBehavior = [.fullScreenPrimary, .managed, .participatesInCycle]
+            window.isMovable = true
+            window.isMovableByWindowBackground = true
+
+            if self.hideTitleBarSetting == true {
+                window.styleMask.insert([.fullSizeContentView])
+                window.titlebarAppearsTransparent = true
+                window.titleVisibility = .hidden
+                window.toolbar = nil
+                window.title = ""
+            }
+
+            if self.floatingWindowSetting == true {
+                window.level = .floating
+            }
+
+            if let aspectRatio = self.aspectRatioSetting {
+                window.contentAspectRatio = aspectRatio
+            }
+
+            NSWindow.allowsAutomaticWindowTabbing = true
+        }
+
+        // Apply the same appearance rules to any subsequent windows that may be created
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification,
+            object: nil,
+            queue: .main) { notif in
+                guard let win = notif.object as? NSWindow else { return }
+                win.styleMask.insert([.resizable])
+
+                if self.hideTitleBarSetting == true {
+                    win.styleMask.insert([.fullSizeContentView])
+                    win.titlebarAppearsTransparent = true
+                    win.titleVisibility = .hidden
+                    win.toolbar = nil
+                    win.title = ""
+                }
+
+                if self.floatingWindowSetting == true {
+                    win.level = .floating
+                }
+
+                if let aspectRatio = self.aspectRatioSetting {
+                    win.contentAspectRatio = aspectRatio
+                }
+        }
     }
 
     var screenCount: Int {
@@ -147,7 +206,43 @@ class AKPlugin: NSObject, Plugin {
     func setupMouseButton(left: Bool, right: Bool, _ consumed: @escaping (Int, Bool) -> Bool) {
         let downType: NSEvent.EventTypeMask = left ? .leftMouseDown : right ? .rightMouseDown : .otherMouseDown
         let upType: NSEvent.EventTypeMask = left ? .leftMouseUp : right ? .rightMouseUp : .otherMouseUp
+
+        // Helper to detect whether the event is inside any of the window "traffic-light" buttons
+        func isInTrafficLightArea(_ event: NSEvent) -> Bool {
+            if self.hideTitleBarSetting == false {
+                return false
+            }
+            guard let win = event.window else { return false }
+            let pointInWindow = event.locationInWindow
+            let buttonTypes: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton, .fullScreenButton]
+            for type in buttonTypes {
+                if let button = win.standardWindowButton(type) {
+                    let localPoint = button.convert(pointInWindow, from: nil) // convert from window coords
+                    if button.bounds.contains(localPoint) {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+
         NSEvent.addLocalMonitorForEvents(matching: downType, handler: { event in
+            // Always allow clicks on the window traffic-light buttons to pass through
+            if isInTrafficLightArea(event) {
+                return event
+            }
+
+            // Detect double-clicks on the title-bar area (respecting system preference)
+
+            if left && event.clickCount == 2, self.hideTitleBarSetting, let win = event.window {
+                let contentRect = win.contentLayoutRect
+                // Title-bar area is the region above contentLayoutRect
+                if event.locationInWindow.y > contentRect.maxY {
+                    win.performZoom(nil)
+                    return nil
+                }
+            }
+
             // For traffic light buttons when fullscreen
             if event.window != NSApplication.shared.windows.first! {
                 return event
@@ -158,6 +253,10 @@ class AKPlugin: NSObject, Plugin {
             return event
         })
         NSEvent.addLocalMonitorForEvents(matching: upType, handler: { event in
+            // Always allow releases on the traffic-light buttons to pass through
+            if isInTrafficLightArea(event) {
+                return event
+            }
             if consumed(event.buttonNumber, false) {
                 return nil
             }
@@ -187,4 +286,31 @@ class AKPlugin: NSObject, Plugin {
     func setMenuBarVisible(_ visible: Bool) {
         NSMenu.setMenuBarVisible(visible)
     }
+
+    /// Convenience instance property that exposes the cached static preference.
+    private var hideTitleBarSetting: Bool { Self.akAppSettingsData?.hideTitleBar ?? false }
+    private var floatingWindowSetting: Bool { Self.akAppSettingsData?.floatingWindow ?? false }
+    private var aspectRatioSetting: NSSize? {
+        guard Self.akAppSettingsData?.resolution == 6 else {
+            return nil
+        }
+        let width = Self.akAppSettingsData?.resizableAspectRatioWidth ?? 0
+        let height = Self.akAppSettingsData?.resizableAspectRatioHeight ?? 0
+        guard width > 0 && height > 0 else {
+            return nil
+        }
+        return NSSize(width: width, height: height)
+    }
+
+    fileprivate static var akAppSettingsData: AKAppSettingsData? = {
+        let bundleIdentifier = Bundle.main.bundleIdentifier ?? ""
+        let settingsURL = URL(fileURLWithPath: "/Users/\(NSUserName())/Library/Containers/io.playcover.PlayCover")
+            .appendingPathComponent("App Settings")
+            .appendingPathComponent("\(bundleIdentifier).plist")
+        guard let data = try? Data(contentsOf: settingsURL),
+              let decoded = try? PropertyListDecoder().decode(AKAppSettingsData.self, from: data) else {
+            return nil
+        }
+        return decoded
+    }()
 }

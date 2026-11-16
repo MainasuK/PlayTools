@@ -41,6 +41,8 @@ let settings = PlaySettings.shared
 
     @objc lazy var adaptiveDisplay = settingsData.resolution == 0 ? false : true
 
+    @objc lazy var resizableWindow = settingsData.resolution == 6 ? true : false
+
     @objc lazy var deviceModel = settingsData.iosDeviceModel as NSString
 
     @objc lazy var oemID: NSString = {
@@ -81,6 +83,22 @@ let settings = PlaySettings.shared
     @objc lazy var noKMOnInput = settingsData.noKMOnInput
 
     @objc lazy var enableScrollWheel = settingsData.enableScrollWheel
+
+    @objc lazy var hideTitleBar = settingsData.hideTitleBar
+
+    @objc lazy var floatingWindow = settingsData.floatingWindow
+
+    @objc lazy var displayRotation = settingsData.displayRotation
+
+    @objc lazy var checkMicPermissionSync = settingsData.checkMicPermissionSync
+
+    @objc lazy var limitMotionUpdateFrequency = settingsData.limitMotionUpdateFrequency
+
+    @objc lazy var disableBuiltinMouse = settingsData.disableBuiltinMouse
+
+    @objc lazy var blockSleepSpamming = settingsData.blockSleepSpamming
+
+    @objc lazy var ignoreUnityKeyboardInitializationError = settingsData.ignoreUnityKeyboardInitializationError
 }
 
 struct AppSettingsData: Codable {
@@ -94,6 +112,7 @@ struct AppSettingsData: Codable {
     var customScaler = 2.0
     var resolution = 2
     var aspectRatio = 1
+    var displayRotation = 0
     var notch = false
     var bypass = false
     var discordActivity = DiscordActivity()
@@ -105,4 +124,14 @@ struct AppSettingsData: Codable {
     var rootWorkDir = true
     var noKMOnInput = false
     var enableScrollWheel = true
+    var hideTitleBar = false
+    var floatingWindow = false
+    var checkMicPermissionSync = false
+    var limitMotionUpdateFrequency = false
+    var disableBuiltinMouse = false
+    var resizableAspectRatioType = 0
+    var resizableAspectRatioWidth = 0
+    var resizableAspectRatioHeight = 0
+    var blockSleepSpamming = false
+    var ignoreUnityKeyboardInitializationError = false
 }

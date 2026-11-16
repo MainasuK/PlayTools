@@ -12,8 +12,8 @@ class RotateViewController: UIViewController {
         .landscapeLeft, .portrait, .landscapeRight, .portraitUpsideDown]
     static var orientationTraverser = 0
 
-    static func rotate() {
-        orientationTraverser += 1
+    static func rotate(deviceOrientation: Int) {
+        orientationTraverser = deviceOrientation
     }
 
     override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
@@ -58,7 +58,10 @@ extension UIApplication {
             guard let windowScene = scene as? UIWindowScene else { continue }
             for window in windowScene.windows {
                 guard let rootViewController = window.rootViewController else { continue }
-                rootViewController.rotateView(sender)
+                if let dict = sender.propertyList as? [String: Any],
+                   let index = dict["rotationIndex"] as? Int {
+                    rootViewController.rotateView(sender, deviceOrientation: index)
+                }
             }
         }
 
@@ -72,15 +75,51 @@ extension UIApplication {
         DebugController.instance.toggleDebugOverlay()
     }
 
-    @objc func hideCursor(_ sender: AnyObject) {
+    @objc
+    func hideCursor(_ sender: AnyObject) {
         AKInterface.shared!.hideCursorMove()
+    }
+
+    @objc
+    func nextKeymap(_ sender: AnyObject) {
+        let isCmdK = mode == .editor
+
+        if isCmdK {
+            ModeAutomaton.onCmdK()
+        }
+
+        keymap.nextKeymap()
+        Toast.showHint(title: "Switched to next keymap: \(keymap.currentKeymapName)")
+        ActionDispatcher.build()
+
+        if isCmdK {
+            ModeAutomaton.onCmdK()
+        }
+    }
+
+    @objc
+    func previousKeymap(_ sender: AnyObject) {
+        let isCmdK = mode == .editor
+
+        if isCmdK {
+            ModeAutomaton.onCmdK()
+        }
+
+        keymap.previousKeymap()
+        Toast.showHint(title: "Switched to previous keymap: \(keymap.currentKeymapName)")
+        ActionDispatcher.build()
+
+        if isCmdK {
+            ModeAutomaton.onCmdK()
+        }
     }
 }
 
 extension UIViewController {
     @objc
-    func rotateView(_ sender: AnyObject) {
-        RotateViewController.rotate()
+    func rotateView(_ sender: AnyObject, deviceOrientation: Int) {
+        RotateViewController.rotate(deviceOrientation: deviceOrientation)
+        RotateViewController.orientationTraverser %= RotateViewController.orientationList.count
         let viewController = RotateViewController(nibName: nil, bundle: nil)
         self.present(viewController, animated: true)
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1, execute: {
@@ -102,12 +141,25 @@ var keymapping = [
                       value: "Upsize selected element", comment: ""),
     NSLocalizedString("menu.keymapping.downsizeElement", tableName: "Playtools",
                       value: "Downsize selected element", comment: ""),
-    NSLocalizedString("menu.keymapping.rotateDisplay", tableName: "Playtools",
-                      value: "Rotate display area", comment: ""),
     NSLocalizedString("menu.keymapping.toggleDebug", tableName: "Playtools",
                       value: "Toggle Debug Overlay", comment: ""),
     NSLocalizedString("menu.keymapping.hide.pointer", tableName: "Playtools",
-                      value: "Hide Mouse Pointer", comment: "")
+                      value: "Hide Mouse Pointer", comment: ""),
+    NSLocalizedString("menu.keymapping.previousKeymap", tableName: "Playtools",
+                      value: "Previous Keymap", comment: ""),
+    NSLocalizedString("menu.keymapping.nextKeymap", tableName: "Playtools",
+                      value: "Next Keymap", comment: "")
+  ]
+var iconsSelctor = [
+    UIImage(systemName: "pencil"),
+    UIImage(systemName: "trash.fill"),
+    UIImage(systemName: "square.resize.up"),
+    UIImage(systemName: "square.resize.down"),
+    UIImage(systemName: "rectangle.landscape.rotate"),
+    UIImage(systemName: "wrench.and.screwdriver"),
+    UIImage(systemName: "pointer.arrow.slash"),
+    UIImage(systemName: "arrow.down.square"),
+    UIImage(systemName: "arrow.up.square")
   ]
 var keymappingSelectors = [#selector(UIApplication.switchEditorMode(_:)),
                            #selector(UIApplication.removeElement(_:)),
@@ -115,11 +167,14 @@ var keymappingSelectors = [#selector(UIApplication.switchEditorMode(_:)),
                            #selector(UIApplication.downscaleElement(_:)),
                            #selector(UIApplication.rotateView(_:)),
                            #selector(UIApplication.toggleDebugOverlay(_:)),
-                           #selector(UIApplication.hideCursor(_:))
+                           #selector(UIApplication.hideCursor(_:)),
+                           #selector(UIApplication.previousKeymap(_:)),
+                           #selector(UIApplication.nextKeymap(_:))
     ]
 
 class MenuController {
     init(with builder: UIMenuBuilder) {
+    #if canImport(UIKit.UIMainMenuSystem)
         if #available(iOS 26.0, *) {
             // Delay to avoid error
             // Cannot set a main menu system configuration while the main menu system is building.
@@ -133,6 +188,9 @@ class MenuController {
         } else {
             setupMenu(with: builder)
         }
+    #else
+        setupMenu(with: builder)
+    #endif
     }
 
     func setupMenu(with builder: UIMenuBuilder) {
@@ -172,11 +230,19 @@ class MenuController {
     }
 
     class func keymappingMenu() -> UIMenu {
-        let keyCommands = [ "K", UIKeyCommand.inputDelete,
-                            UIKeyCommand.inputUpArrow, UIKeyCommand.inputDownArrow, "R", "D", "."]
-        let arrowKeyChildrenCommands = zip(keyCommands, keymapping).map { (command, btn) in
-            UIKeyCommand(title: btn,
-                         image: nil,
+        let keyCommands = [
+            "K",                            // Toggle keymap editor
+            UIKeyCommand.inputDelete,       // Remove keymap element
+            UIKeyCommand.inputUpArrow,      // Increase keymap element size
+            UIKeyCommand.inputDownArrow,    // Decrease keymap element size
+            "D",                            // Toggle debug overlay
+            ".",                            // Hide cursor until move
+            "[",                            // Previous keymap
+            "]"                             // Next keymap
+        ]
+        let arrowKeyChildrenCommands = zip(zip(keyCommands, keymapping), iconsSelctor).map { (arg0, image) in
+            let (command, btn) = arg0
+            return UIKeyCommand(title: btn, image: image,
                          action: keymappingSelectors[keymapping.firstIndex(of: btn)!],
                          input: command,
                          modifierFlags: .command,
@@ -184,15 +250,37 @@ class MenuController {
             )
         }
 
-        let arrowKeysGroup = UIMenu(title: "",
-                                    image: nil,
-                                    identifier: .keymappingOptionsMenu,
-                                    options: .displayInline,
-                                    children: arrowKeyChildrenCommands)
+        // Every rotation item calls the *same selector*, passing its index in propertyList
+        let rotationMenuItems = [
+            "Landscape Left (0°)", "Portrait (90°)", "Landscape Right (180°)", "Portrait Upside Down (270°)"
+        ].enumerated().map { (index, title) in
+            UIKeyCommand(
+                title: title, image: nil,
+                action: #selector(UIApplication.rotateView(_:)),
+                input: "\(index + 1)",
+                modifierFlags: [.command, .shift], // ⌘⇧1–4
+                propertyList: ["rotationIndex": index]
+            )
+        }
+
+        let rotationMenu = UIMenu(
+            title: NSLocalizedString("menu.keymapping.rotateDisplay", tableName: "Playtools",
+                              value: "Rotate display area", comment: ""), image: nil,
+            identifier: .rotationOptionsMenu,
+            options: [],
+            children: rotationMenuItems
+        )
+
+        // Combine all menus
+        let arrowKeysGroup = UIMenu(
+            title: "", image: nil,
+            identifier: .keymappingOptionsMenu,
+            options: .displayInline,
+            children: arrowKeyChildrenCommands + [rotationMenu]
+        )
 
         return UIMenu(title: NSLocalizedString("menu.keymapping", tableName: "Playtools",
-                                               value: "Keymapping", comment: ""),
-                      image: nil,
+                                               value: "Keymapping", comment: ""), image: nil,
                       identifier: .keymappingMenu,
                       options: [],
                       children: [arrowKeysGroup])
@@ -204,4 +292,5 @@ extension UIMenu.Identifier {
     static var keymappingOptionsMenu: UIMenu.Identifier { UIMenu.Identifier("io.playcover.PlayTools.menus.keymapping") }
     static var debuggingMenu: UIMenu.Identifier { UIMenu.Identifier("io.playcover.PlayTools.menus.debug") }
     static var debuggingOptionsMenu: UIMenu.Identifier { UIMenu.Identifier("io.playcover.PlayTools.menus.debugging") }
+    static var rotationOptionsMenu: UIMenu.Identifier { UIMenu.Identifier("io.playcover.PlayTools.menus.rotation") }
 }

@@ -7,6 +7,7 @@
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
+#import <UIKit/UIKit.h>
 #import <PlayTools/PlayTools-Swift.h>
 
 __attribute__((visibility("hidden")))
@@ -116,6 +117,23 @@ __attribute__((visibility("hidden")))
     return @{};
 }
 
+// Endfield UIAlertController hook
+- (void)pm_endfield_presentViewController:(UIViewController *)viewControllerToPresent
+                                 animated:(BOOL)flag
+                               completion:(void (^)(void))completion {
+    // If it's a UIAlertController, silently ignore it
+    if ([viewControllerToPresent isKindOfClass:[UIAlertController class]]) {
+        NSLog(@"PC-DEBUG: [PlayShadow] Blocked UIAlertController for Endfield");
+        if (completion) {
+            completion();
+        }
+        return;
+    }
+    
+    // Otherwise, present normally
+    [self pm_endfield_presentViewController:viewControllerToPresent animated:flag completion:completion];
+}
+
 // Class methods
 
 + (void) pm_return_2_with_completion_handler:(void (^)(NSInteger))completionHandler {
@@ -168,9 +186,23 @@ __attribute__((visibility("hidden")))
     // Swizzle ATTrackingManager
     [objc_getClass("ATTrackingManager") swizzleClassMethod:@selector(requestTrackingAuthorizationWithCompletionHandler:) withMethod:@selector(pm_return_2_with_completion_handler:)];
     [objc_getClass("ATTrackingManager") swizzleClassMethod:@selector(trackingAuthorizationStatus) withMethod:@selector(pm_return_2)];
-
+    
+    
     // canResizeToFitContent
     // [objc_getClass("UIWindow") swizzleInstanceMethod:@selector(canResizeToFitContent) withMethod:@selector(pm_return_true)];
+    
+    // Block UIAlertController presentation to bypass Endfield jailbreak message
+    NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
+    if ([bundleID isEqualToString:@"com.gryphline.endfield.ios"] || 
+    [bundleID isEqualToString:@"com.hypergryph.endfield"]) {
+        [self debugLogger:@"loading UIAlertController bypass"];
+        [objc_getClass("UIViewController") swizzleInstanceMethod:@selector(presentViewController:animated:completion:) withMethod:@selector(pm_endfield_presentViewController:animated:completion:)];
+    }
+    
+    if ([bundleID isEqualToString:@"com.kurogame.wutheringwaves.global"] || [bundleID isEqualToString:@"com.kurogame.mingchao"]) {
+        [objc_getClass("KRDeclaredAgeRangeService") swizzleInstanceMethod:@selector(isAgeRangeRequestAvailable) withMethod:@selector(pm_return_false)];
+    }
+   
 }
 
 + (void) loadJailbreakBypass {
